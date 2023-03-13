@@ -1,0 +1,15 @@
+[package]
+name = "discv5_test"
+version = "0.1.0"
+edition = "2021"
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[dependencies]
+discv5 = "0.2.1"
+tokio = { version = "1.26.0", features = ["full"] }
+clap = { version = "4.1.8", features = ["derive"] }
+tracing = { version = "0.1.29", features = ["log"] }
+tracing-subscriber = { version = "0.3.3", features = ["env-filter"] }
+rand = { version = "0.8.4", package = "rand" }
+hex = "0.4.3"
