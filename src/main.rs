@@ -58,11 +58,11 @@ async fn main() {
     };
 
     // if the ENR is useful print it
-    println!("Node Id: {}", enr.node_id());
+    info!("------node_id: {}", enr.node_id());
     if enr.udp4_socket().is_none() {
-        println!("------local enr is not printed as no IP:PORT was specified");
+        info!("------local enr is not printed as no IP:PORT was specified");
     }
-    println!(
+    info!(
         "------local enr: {} , local base64 enr:{}",
         enr,
         enr.to_base64()
@@ -78,13 +78,13 @@ async fn main() {
     let base64_enr=String::from("enr:-IS4QObpNn0Zot_POpnA7eqplVsiWUZ1lSXNQgaYPWF6OSIkAORv0DOuoj7cxQXvIR0KRrlT-l8-o4Cvf9rq8N5RvDcBgmlkgnY0gmlwhA3Vb9GJc2VjcDI1NmsxoQOfyzH4QUhiHcN11QC9xTo-SQIjiKmbHkwOuMfqhiJQqIN1ZHCCIy0");
     match base64_enr.parse::<enr::Enr<CombinedKey>>() {
         Ok(enr) => {
-            println!(
+            info!(
                 "------remote enr: {} , remote base64 enr:{}",
                 enr, base64_enr
             );
             info!("------discv5 will add remote enr");
             if let Err(e) = discv5.add_enr(enr) {
-                println!("------remote enr was not added: {e}");
+                info!("------remote enr was not added: {e}");
             }
         }
         Err(e) => panic!("decoding remote enr failed: {}", e),
