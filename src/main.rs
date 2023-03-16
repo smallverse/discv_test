@@ -136,7 +136,7 @@ async fn main() {
                         // }
 
                         for enr in &v {
-                            info!(
+                                info!(
                                 "------node enr: {} , node base64 enr:{}",
                                 enr,
                                 enr.to_base64()
