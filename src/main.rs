@@ -131,8 +131,16 @@ async fn main() {
                         // found a list of ENR's print their NodeIds
                         let node_ids = v.iter().map(|enr| enr.node_id()).collect::<Vec<_>>();
                         info!("------Nodes found: {}", node_ids.len());
-                        for node_id in node_ids {
-                            info!("------node_id: {}", node_id);
+                        // for node_id in node_ids {
+                        //     info!("------node_id: {}", node_id);
+                        // }
+
+                        for enr in &v {
+                            info!(
+                                "------node enr: {} , node base64 enr:{}",
+                                enr,
+                                enr.to_base64()
+                            );
                         }
                     }
                 }
