@@ -10,10 +10,18 @@
 //! $ cargo run --example simple_server -- <ENR-IP> <ENR-PORT> <BASE64ENR>
 //! ```
 
+use discv5::enr::NodeId;
 use discv5::{enr, enr::CombinedKey, Discv5, Discv5Config, Discv5Event};
 use std::net::{Ipv4Addr, SocketAddr};
 use std::time::Duration;
 use tracing::{info, warn};
+
+pub const DEFAULT_BASE_PORT: u16 = 25_000;
+pub const TRANSACTION_PORT_OFFSET: u16 = 0;
+pub const MEMPOOL_PORT_OFFSET: u16 = 1;
+pub const CONSENSUS_PORT_OFFSET: u16 = 2;
+pub const SIGNATURE_PORT_OFFSET: u16 = 3;
+pub const DISCOVERY_PORT_OFFSET: u16 = 4;
 
 #[tokio::main]
 async fn main() {
@@ -75,7 +83,7 @@ async fn main() {
     let mut discv5: Discv5 = Discv5::new(enr, enr_key, config).unwrap();
 
     // if we know of another peer's ENR, add it known peers
-    let base64_enr=String::from("enr:-IS4QObpNn0Zot_POpnA7eqplVsiWUZ1lSXNQgaYPWF6OSIkAORv0DOuoj7cxQXvIR0KRrlT-l8-o4Cvf9rq8N5RvDcBgmlkgnY0gmlwhA3Vb9GJc2VjcDI1NmsxoQOfyzH4QUhiHcN11QC9xTo-SQIjiKmbHkwOuMfqhiJQqIN1ZHCCIy0");
+    let base64_enr=String::from("enr:-IS4QMOVF32mO7kgr1-vHjHEQAqmuthEn3_xbDXAfbrkkpUeSfRVoEjkVo3Sj_Q0LyAxw0jiBNVP0Y5EfGsfn-k4PuQBgmlkgnY0gmlwhA3Vb9GJc2VjcDI1NmsxoQOfyzH4QUhiHcN11QC9xTo-SQIjiKmbHkwOuMfqhiJQqIN1ZHCCIy0");
     match base64_enr.parse::<enr::Enr<CombinedKey>>() {
         Ok(enr) => {
             info!(
@@ -113,6 +121,7 @@ async fn main() {
     // construct a 30 second interval to search for new peers.
     let mut query_interval = tokio::time::interval(Duration::from_secs(30));
 
+    let mut curr_node_ids: Vec<NodeId> = Vec::new();
     loop {
         tokio::select! {
             _ = query_interval.tick() => {
@@ -131,8 +140,17 @@ async fn main() {
                         let node_ids = v.iter().map(|enr| enr.node_id()).collect::<Vec<_>>();
                         info!("------Nodes found: {}", node_ids.len());
                         for node_id in node_ids {
+                            if curr_node_ids.contains(&node_id) {
+                                continue;
+                            }
                             info!("------node_id: {}", node_id);
+                            curr_node_ids.push(node_id);
+                            info!("------push node:{}",node_id.to_string());
                         }
+                        info!("------curr_node_ids found: {}", curr_node_ids.len());
+
+
+                        // _curr_node_ids.extend(node_ids.clone());
                     }
                 }
             }
@@ -140,7 +158,11 @@ async fn main() {
                 // consume the events even if not printed
 
                 match discv5_ev {
-                    Discv5Event::Discovered(enr) => info!("------Discv5Event::Discovered,enr:{},base64 enr:{}", enr,enr.to_base64()),
+                    Discv5Event::Discovered(enr) => {
+                        info!("------Discovered,enr: {}", enr);
+                        info!("------Discovered,base64 enr:{}",enr.to_base64());
+
+                    },
                     Discv5Event::EnrAdded { enr, replaced: _ } => info!("------Discv5Event::EnrAdded,enr:{},base64 enr:{}", enr,enr.to_base64()),
                     Discv5Event::NodeInserted { node_id, replaced: _ } => info!("------Discv5Event::NodeInserted, node_id:{}", node_id),
                     Discv5Event::SessionEstablished(enr, _) => info!("------Discv5Event::SessionEstablished,enr:{},base64 enr:{}", enr,enr.to_base64()),
@@ -149,5 +171,19 @@ async fn main() {
                 };
             }
         }
+    }
+}
+
+pub fn add(left: usize, right: usize) -> usize {
+    left + right
+}
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn it_works() {
+        let result = add(2, 2);
+        assert_eq!(result, 4);
     }
 }
