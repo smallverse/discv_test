@@ -10,7 +10,7 @@
 //! $ cargo run --example simple_server -- <ENR-IP> <ENR-PORT> <BASE64ENR>
 //! ```
 
-use discv5::enr::NodeId;
+use discv5::enr::EnrPublicKey;
 use discv5::{enr, enr::CombinedKey, Discv5, Discv5Config, Discv5Event};
 use std::net::{Ipv4Addr, SocketAddr};
 use std::time::Duration;
@@ -136,11 +136,12 @@ async fn main() {
                         // }
 
                         for enr in &v {
-                                info!(
+                            info!(
                                 "------node enr: {} , node base64 enr:{}",
                                 enr,
                                 enr.to_base64()
                             );
+                            info!("------node,public_key:{:?}",base64::encode(enr.public_key().encode()));
                         }
                     }
                 }
@@ -152,11 +153,14 @@ async fn main() {
                     Discv5Event::Discovered(enr) => {
                         info!("------Discovered,enr: {}", enr);
                         info!("------Discovered,base64 enr:{}",enr.to_base64());
-
+                        info!("------Discovered,public_key:{:?}",base64::encode(enr.public_key().encode()));
                     },
                     Discv5Event::EnrAdded { enr, replaced: _ } => info!("------Discv5Event::EnrAdded,enr:{},base64 enr:{}", enr,enr.to_base64()),
                     Discv5Event::NodeInserted { node_id, replaced: _ } => info!("------Discv5Event::NodeInserted, node_id:{}", node_id),
-                    Discv5Event::SessionEstablished(enr, _) => info!("------Discv5Event::SessionEstablished,enr:{},base64 enr:{}", enr,enr.to_base64()),
+                    Discv5Event::SessionEstablished(enr, _) => {
+                        info!("------Discv5Event::SessionEstablished,enr:{},base64 enr:{}", enr,enr.to_base64());
+                        info!("------Discv5Event::SessionEstablished,public_key:{}",base64::encode(enr.public_key().encode()));
+                    },
                     Discv5Event::SocketUpdated(addr) => info!("------Discv5Event::SocketUpdated,addr:{}", addr),
                     Discv5Event::TalkRequest(t_req) => info!("------Discv5Event::TalkRequest,TalkRequest:{:?}",t_req),
                 };
