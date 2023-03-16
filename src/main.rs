@@ -16,7 +16,6 @@ use std::net::{Ipv4Addr, SocketAddr};
 use std::time::Duration;
 use tracing::{info, warn};
 
-pub const TRANSACTION_PORT_OFFSET: u16 = 0;
 pub const MEMPOOL_PORT_OFFSET: u16 = 1;
 pub const CONSENSUS_PORT_OFFSET: u16 = 2;
 pub const SIGNATURE_PORT_OFFSET: u16 = 3;
