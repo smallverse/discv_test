@@ -114,7 +114,6 @@ async fn main() {
     // construct a 30 second interval to search for new peers.
     let mut query_interval = tokio::time::interval(Duration::from_secs(30));
 
-    let mut curr_node_ids: Vec<NodeId> = Vec::new();
     loop {
         tokio::select! {
             _ = query_interval.tick() => {
