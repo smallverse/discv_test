@@ -140,17 +140,8 @@ async fn main() {
                         let node_ids = v.iter().map(|enr| enr.node_id()).collect::<Vec<_>>();
                         info!("------Nodes found: {}", node_ids.len());
                         for node_id in node_ids {
-                            if curr_node_ids.contains(&node_id) {
-                                continue;
-                            }
                             info!("------node_id: {}", node_id);
-                            curr_node_ids.push(node_id);
-                            info!("------push node:{}",node_id.to_string());
                         }
-                        info!("------curr_node_ids found: {}", curr_node_ids.len());
-
-
-                        // _curr_node_ids.extend(node_ids.clone());
                     }
                 }
             }
