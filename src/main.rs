@@ -16,11 +16,6 @@ use std::net::{Ipv4Addr, SocketAddr};
 use std::time::Duration;
 use tracing::{info, warn};
 
-pub const MEMPOOL_PORT_OFFSET: u16 = 1;
-pub const CONSENSUS_PORT_OFFSET: u16 = 2;
-pub const SIGNATURE_PORT_OFFSET: u16 = 3;
-pub const DISCOVERY_PORT_OFFSET: u16 = 4;
-
 #[tokio::main]
 async fn main() {
     // allows detailed logging with the RUST_LOG env variable
