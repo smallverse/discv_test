@@ -10,14 +10,19 @@
 //! $ cargo run --example simple_server -- <ENR-IP> <ENR-PORT> <BASE64ENR>
 //! ```
 
-use discv5::enr::EnrPublicKey;
-use discv5::{enr, enr::CombinedKey, Discv5, Discv5Config, Discv5Event};
 use std::net::{Ipv4Addr, SocketAddr};
 use std::time::Duration;
-use tracing::{info, warn};
+
+use discv5::enr::EnrPublicKey;
+use discv5::{enr, enr::CombinedKey, Discv5, Discv5Config, Discv5Event};
+use tracing::{info, log, warn};
 
 #[tokio::main]
 async fn main() {
+    //https://users.rust-lang.org/t/best-way-to-log-with-json/83385
+    tracing_subscriber::fmt().json().init();
+    log::info!("hello");
+
     // allows detailed logging with the RUST_LOG env variable
     let filter_layer = tracing_subscriber::EnvFilter::try_from_default_env()
         .or_else(|_| tracing_subscriber::EnvFilter::try_new("info"))
@@ -76,7 +81,7 @@ async fn main() {
     let mut discv5: Discv5 = Discv5::new(enr, enr_key, config).unwrap();
 
     // if we know of another peer's ENR, add it known peers
-    let base64_enr=String::from("enr:-IS4QMOVF32mO7kgr1-vHjHEQAqmuthEn3_xbDXAfbrkkpUeSfRVoEjkVo3Sj_Q0LyAxw0jiBNVP0Y5EfGsfn-k4PuQBgmlkgnY0gmlwhA3Vb9GJc2VjcDI1NmsxoQOfyzH4QUhiHcN11QC9xTo-SQIjiKmbHkwOuMfqhiJQqIN1ZHCCIy0");
+    let base64_enr = String::from("enr:-IS4QMOVF32mO7kgr1-vHjHEQAqmuthEn3_xbDXAfbrkkpUeSfRVoEjkVo3Sj_Q0LyAxw0jiBNVP0Y5EfGsfn-k4PuQBgmlkgnY0gmlwhA3Vb9GJc2VjcDI1NmsxoQOfyzH4QUhiHcN11QC9xTo-SQIjiKmbHkwOuMfqhiJQqIN1ZHCCIy0");
     match base64_enr.parse::<enr::Enr<CombinedKey>>() {
         Ok(enr) => {
             info!(
@@ -172,6 +177,7 @@ async fn main() {
 pub fn add(left: usize, right: usize) -> usize {
     left + right
 }
+
 #[cfg(test)]
 mod tests {
     use super::*;
