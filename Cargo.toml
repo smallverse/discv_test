@@ -9,7 +9,7 @@ edition = "2021"
 discv5 = "0.2.1"
 tokio = { version = "1.26.0", features = ["full"] }
 clap = { version = "4.1.8", features = ["derive"] }
-tracing = { version = "0.1.29", features = ["log"] }
+tracing = { version = "0.1.37", features = ["log"] }
 #tracing-subscriber = { version = "0.3.3", features = ["env-filter"] }
 tracing-subscriber = { version = "0.3.16", features = ["json"] }
 rand = { version = "0.8.4", package = "rand" }
