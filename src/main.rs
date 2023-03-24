@@ -17,7 +17,7 @@ use discv5::enr::EnrPublicKey;
 use discv5::{enr, enr::CombinedKey, Discv5, Discv5Config, Discv5Event};
 use tracing::{info, log, warn};
 
-use crate::test::get_1;
+use crate::test::{get_1, get_local_ip, get_pub_network_ip};
 
 mod test;
 
@@ -25,8 +25,6 @@ mod test;
 async fn main() {
     //https://users.rust-lang.org/t/best-way-to-log-with-json/83385
     tracing_subscriber::fmt().json().init();
-    log::info!("------hello");
-    get_1();
 
     // allows detailed logging with the RUST_LOG env variable
     let filter_layer = tracing_subscriber::EnvFilter::try_from_default_env()
@@ -55,7 +53,7 @@ async fn main() {
     let enr_key = CombinedKey::generate_secp256k1();
 
     // construct a local ENR
-    let enr = {
+    let local_enr = {
         let mut builder = enr::EnrBuilder::new("v4");
         // if an IP was specified, use it
         if let Some(external_address) = address {
@@ -69,21 +67,21 @@ async fn main() {
     };
 
     // if the ENR is useful print it
-    info!("------node_id: {}", enr.node_id());
-    if enr.udp4_socket().is_none() {
+    info!("------node_id: {}", local_enr.node_id());
+    if local_enr.udp4_socket().is_none() {
         info!("------local enr is not printed as no IP:PORT was specified");
     }
     info!(
         "------local enr: {} , local base64 enr:{}",
-        enr,
-        enr.to_base64()
+        local_enr,
+        local_enr.to_base64()
     );
 
     // default configuration
     let config = Discv5Config::default();
 
     // construct the discv5 server
-    let mut discv5: Discv5 = Discv5::new(enr, enr_key, config).unwrap();
+    let mut discv5: Discv5 = Discv5::new(local_enr, enr_key, config).unwrap();
 
     // if we know of another peer's ENR, add it known peers
     let base64_enr = String::from("enr:-IS4QMOVF32mO7kgr1-vHjHEQAqmuthEn3_xbDXAfbrkkpUeSfRVoEjkVo3Sj_Q0LyAxw0jiBNVP0Y5EfGsfn-k4PuQBgmlkgnY0gmlwhA3Vb9GJc2VjcDI1NmsxoQOfyzH4QUhiHcN11QC9xTo-SQIjiKmbHkwOuMfqhiJQqIN1ZHCCIy0");
