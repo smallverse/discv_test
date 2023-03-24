@@ -17,8 +17,6 @@ use discv5::enr::EnrPublicKey;
 use discv5::{enr, enr::CombinedKey, Discv5, Discv5Config, Discv5Event};
 use tracing::{info, log, warn};
 
-use crate::test::{get_1, get_local_ip, get_pub_network_ip};
-
 mod test;
 
 #[tokio::main]
