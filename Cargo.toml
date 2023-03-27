@@ -15,3 +15,4 @@ tracing-subscriber = { version = "0.3.16", features = ["json"] }
 rand = { version = "0.8.4", package = "rand" }
 hex = "0.4.3"
 base64 = "0.21.0"
+if-addrs = "0.10.1"

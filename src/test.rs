@@ -5,6 +5,11 @@ use tracing::{info, log, warn};
 
 pub fn get_1() {
     log::info!("------json get_1");
+
+    // List all of the machine's network interfaces
+    for iface in if_addrs::get_if_addrs().unwrap() {
+        println!("{:#?}", iface);
+    }
 }
 
 pub fn get_local_ip() -> Option<String> {
