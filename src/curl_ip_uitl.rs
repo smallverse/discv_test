@@ -1,56 +1,40 @@
+use std::cell::RefCell;
 use std::io::{stdout, Write};
-use std::net::UdpSocket;
+use std::net::{IpAddr, UdpSocket};
 use std::process::Command;
+use std::sync::{Arc, Mutex};
 
 use clap::builder::Str;
 use curl::easy::Easy;
-use curl::Error;
+use curl::{init, Error};
 use tracing::log::{error, log};
 use tracing::{info, log, warn};
 
-pub fn get_pub_ip() {
-    // curl -s ifconfig.me
-    let mut easy = Easy::new();
-    easy.url("ifconfig.me").unwrap();
-    easy.write_function(|data| {
-        let mut data_str = String::from_utf8(data.to_vec()).unwrap();
-        info!("------data {}", data_str);
-        Ok(data.len())
-    })
-    .unwrap();
-    easy.perform().unwrap();
+pub fn get_public_ip() -> String {
+    let output = Command::new("curl")
+        .arg("ifconfig.me")
+        .output()
+        .expect("failed to execute process");
 
-    info!("------code {}", easy.response_code().unwrap());
+    String::from_utf8_lossy(&output.stdout).to_string()
 }
 
 pub fn get_local_ip() -> String {
-    let mut easy = Easy::new();
-    let mut local_ip = easy.local_ip().unwrap().unwrap();
-    info!("------local ip: {}", local_ip);
-    return local_ip.to_string();
-}
-
-pub fn get_local_ip_by_socket() -> Option<String> {
-    let socket = match UdpSocket::bind("0.0.0.0:0") {
-        Ok(s) => s,
-        Err(_) => return None,
-    };
-
-    match socket.connect("8.8.8.8:80") {
-        Ok(()) => (),
-        Err(_) => return None,
-    };
-
-    return match socket.local_addr() {
-        Ok(addr) => Some(addr.ip().to_string()),
-        Err(_) => None,
-    };
+    let socket = UdpSocket::bind("0.0.0.0:0").unwrap();
+    socket.connect("8.8.8.8:80").unwrap();
+    let local_addr = socket.local_addr().unwrap();
+    let ip = local_addr.ip();
+    match ip {
+        IpAddr::V4(ipv4) => ipv4.to_string(),
+        IpAddr::V6(ipv6) => ipv6.to_string(),
+    }
 }
 
 /// tracing_test https://docs.rs/tracing-test/latest/tracing_test/
 /// https://stackoverflow.com/questions/72884779/how-to-print-tracing-output-in-tests
 #[cfg(test)]
 mod tests {
+    use tracing::debug;
     use tracing_test::traced_test;
 
     // Note this useful idiom: importing names from outer (for mod tests) scope.
@@ -59,7 +43,7 @@ mod tests {
     #[traced_test]
     #[test]
     fn test_get_pub_ip() {
-        let res = get_pub_ip();
-        // assert!(res.len() > 0);
+        debug!("{}", get_public_ip());
+        debug!("{}", get_local_ip());
     }
 }
