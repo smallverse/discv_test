@@ -1,8 +1,6 @@
-use std::cell::RefCell;
 use std::io::{stdout, Write};
 use std::net::{IpAddr, UdpSocket};
 use std::process::Command;
-use std::sync::{Arc, Mutex};
 
 use clap::builder::Str;
 use curl::easy::Easy;
