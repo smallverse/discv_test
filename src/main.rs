@@ -17,7 +17,7 @@ use discv5::enr::EnrPublicKey;
 use discv5::{enr, enr::CombinedKey, Discv5, Discv5Config, Discv5Event};
 use tracing::{info, log, warn};
 
-mod ip_uitl;
+mod ip_util;
 
 #[tokio::main]
 async fn main() {
