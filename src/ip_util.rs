@@ -2,9 +2,6 @@ use std::io::{stdout, Write};
 use std::net::{IpAddr, UdpSocket};
 use std::process::Command;
 
-use clap::builder::Str;
-use curl::easy::Easy;
-use curl::{init, Error};
 use tracing::log::{error, log};
 use tracing::{info, log, warn};
 
