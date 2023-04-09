@@ -15,6 +15,7 @@ use std::net::{Ipv4Addr, SocketAddr};
 use std::time::Duration;
 
 use async_std::io;
+use async_std::prelude::FutureExt;
 use discv5::enr::EnrPublicKey;
 use discv5::{enr, enr::CombinedKey, Discv5, Discv5Config, Discv5Event};
 use futures::{prelude::*, select};
@@ -40,65 +41,6 @@ mod ip_util;
 async fn main() -> Result<(), Box<dyn Error>> {
     //https://users.rust-lang.org/t/best-way-to-log-with-json/83385
     tracing_subscriber::fmt().json().init();
-
-    // run_distributed_kv_store().await.unwrap();
-    // Create a random key for ourselves.
-    let local_key = identity::Keypair::generate_ed25519();
-    let local_peer_id = PeerId::from(local_key.public());
-    info!("local_key:{:?},local_peer_id:{}", local_key, local_peer_id);
-
-    // Set up a an encrypted DNS-enabled TCP Transport over the Mplex protocol.
-    let transport = development_transport(local_key).await?;
-
-    // We create a custom network behaviour that combines Kademlia and mDNS.
-    #[derive(NetworkBehaviour)]
-    #[behaviour(out_event = "MyBehaviourEvent")]
-    struct MyBehaviour {
-        kademlia: Kademlia<MemoryStore>,
-        mdns: mdns::async_io::Behaviour,
-    }
-
-    #[allow(clippy::large_enum_variant)]
-    enum MyBehaviourEvent {
-        Kademlia(KademliaEvent),
-        Mdns(mdns::Event),
-    }
-
-    impl From<KademliaEvent> for MyBehaviourEvent {
-        fn from(event: KademliaEvent) -> Self {
-            MyBehaviourEvent::Kademlia(event)
-        }
-    }
-
-    impl From<mdns::Event> for MyBehaviourEvent {
-        fn from(event: mdns::Event) -> Self {
-            MyBehaviourEvent::Mdns(event)
-        }
-    }
-
-    // Create a swarm to manage peers and events.
-    let mut swarm_socket_addrs = {
-        // Create a Kademlia behaviour.
-        let memory_store_config: MemoryStoreConfig = MemoryStoreConfig {
-            max_records: 1024 * 10,
-            max_value_bytes: 65 * 1024,
-            max_providers_per_key: 1024 * 10,
-            max_provided_keys: K_VALUE.get(),
-        };
-        let store = MemoryStore::new(local_peer_id);
-        let kademlia = Kademlia::new(local_peer_id, store);
-        let mdns = mdns::async_io::Behaviour::new(mdns::Config::default(), local_peer_id)?;
-        let behaviour = MyBehaviour { kademlia, mdns };
-        SwarmBuilder::with_async_std_executor(transport, behaviour, local_peer_id).build()
-    };
-
-    // Listen on all interfaces and whatever port the OS assigns.
-    // swarm.listen_on("/ip4/0.0.0.0/tcp/0".parse()?)?;
-    // let addr = ["/ip4/", ip_util::get_public_ip().as_str(), "/tcp/0"].join("");
-    let addr = ["/ip4/", ip_util::get_local_ip().as_str(), "/tcp/27000"].join("");
-
-    swarm_socket_addrs.listen_on(addr.parse()?)?;
-    //---
 
     // allows detailed logging with the RUST_LOG env variable
     let filter_layer = tracing_subscriber::EnvFilter::try_from_default_env()
@@ -150,6 +92,9 @@ async fn main() -> Result<(), Box<dyn Error>> {
         local_enr,
         local_enr.to_base64()
     );
+
+    let local_enr_pub_key = base64::encode(local_enr.public_key().encode());
+    info!("local_enr_pub_key:{}", local_enr_pub_key);
 
     // default configuration
     let config = Discv5Config::default();
@@ -225,6 +170,10 @@ async fn main() -> Result<(), Box<dyn Error>> {
                             );
                             info!("------node,public_key:{:?}",base64::encode(enr.public_key().encode()));
                         }
+                        let curr_pub_ip=ip_util::get_public_ip();
+                        info!("------curr_pub_ip:{}",curr_pub_ip);
+                        // handle_input_line(&mut swarm_socket_addrs.behaviour_mut().kademlia, ["PUT","k","v"].join(" "));
+                        // handle_input_line(&mut swarm_socket_addrs.behaviour_mut().kademlia, ["PUT",local_enr_pub_key.as_str(),curr_pub_ip.as_str()].join(" "));
                     }
                 }
             }
@@ -247,147 +196,6 @@ async fn main() -> Result<(), Box<dyn Error>> {
                     Discv5Event::TalkRequest(t_req) => info!("------Discv5Event::TalkRequest,TalkRequest:{:?}",t_req),
                 };
             }
-        }
-        select! {
-            event = swarm_socket_addrs.select_next_some() => match event {
-                SwarmEvent::NewListenAddr { address, .. } => {
-                    info!("Listening in {address:?}");
-                },
-                SwarmEvent::Behaviour(MyBehaviourEvent::Mdns(mdns::Event::Discovered(list))) => {
-                    for (peer_id, multiaddr) in list {
-                        swarm_socket_addrs.behaviour_mut().kademlia.add_address(&peer_id, multiaddr);
-                    }
-                }
-                SwarmEvent::Behaviour(MyBehaviourEvent::Kademlia(KademliaEvent::OutboundQueryProgressed { result, ..})) => {
-                    match result {
-                        QueryResult::GetProviders(Ok(GetProvidersOk::FoundProviders { key, providers, .. })) => {
-                            for peer in providers {
-                                info!(
-                                    "Peer {peer:?} provides key {:?}",
-                                    std::str::from_utf8(key.as_ref()).unwrap()
-                                );
-                            }
-                        }
-                        QueryResult::GetProviders(Err(err)) => {
-                            error!("Failed to get providers: {err:?}");
-                        }
-                        QueryResult::GetRecord(Ok(
-                            GetRecordOk::FoundRecord(PeerRecord {
-                                record: Record { key, value, .. },
-                                ..
-                            })
-                        )) => {
-                            println!(
-                                "Got record {:?} {:?}",
-                                std::str::from_utf8(key.as_ref()).unwrap(),
-                                std::str::from_utf8(&value).unwrap(),
-                            );
-                        }
-                        QueryResult::GetRecord(Ok(_)) => {}
-                        QueryResult::GetRecord(Err(err)) => {
-                            error!("Failed to get record: {err:?}");
-                        }
-                        QueryResult::PutRecord(Ok(PutRecordOk { key })) => {
-                            info!(
-                                "Successfully put record {:?}",
-                                std::str::from_utf8(key.as_ref()).unwrap()
-                            );
-                        }
-                        QueryResult::PutRecord(Err(err)) => {
-                            error!("Failed to put record: {err:?}");
-                        }
-                        QueryResult::StartProviding(Ok(AddProviderOk { key })) => {
-                            info!(
-                                "Successfully put provider record {:?}",
-                                std::str::from_utf8(key.as_ref()).unwrap()
-                            );
-                        }
-                        QueryResult::StartProviding(Err(err)) => {
-                            error!("Failed to put provider record: {err:?}");
-                        }
-                        _ => {}
-                    }
-                }
-                _ => {}
-            }
-        }
-    }
-}
-
-fn handle_input_line(kademlia: &mut Kademlia<MemoryStore>, line: String) {
-    let mut args = line.split(' ');
-
-    match args.next() {
-        Some("GET") => {
-            let key = {
-                match args.next() {
-                    Some(key) => Key::new(&key),
-                    None => {
-                        error!("Expected key");
-                        return;
-                    }
-                }
-            };
-            kademlia.get_record(key);
-        }
-        Some("GET_PROVIDERS") => {
-            let key = {
-                match args.next() {
-                    Some(key) => Key::new(&key),
-                    None => {
-                        error!("Expected key");
-                        return;
-                    }
-                }
-            };
-            kademlia.get_providers(key);
-        }
-        Some("PUT") => {
-            let key = {
-                match args.next() {
-                    Some(key) => Key::new(&key),
-                    None => {
-                        error!("Expected key");
-                        return;
-                    }
-                }
-            };
-            let value = {
-                match args.next() {
-                    Some(value) => value.as_bytes().to_vec(),
-                    None => {
-                        error!("Expected value");
-                        return;
-                    }
-                }
-            };
-            let record = Record {
-                key,
-                value,
-                publisher: None,
-                expires: None,
-            };
-            kademlia
-                .put_record(record, Quorum::One)
-                .expect("Failed to store record locally.");
-        }
-        Some("PUT_PROVIDER") => {
-            let key = {
-                match args.next() {
-                    Some(key) => Key::new(&key),
-                    None => {
-                        error!("Expected key");
-                        return;
-                    }
-                }
-            };
-
-            kademlia
-                .start_providing(key)
-                .expect("Failed to start providing key");
-        }
-        _ => {
-            error!("expected GET, GET_PROVIDERS, PUT or PUT_PROVIDER");
         }
     }
 }
