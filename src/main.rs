@@ -17,12 +17,17 @@ use discv5::enr::EnrPublicKey;
 use discv5::{enr, enr::CombinedKey, Discv5, Discv5Config, Discv5Event};
 use tracing::{info, log, warn};
 
+use crate::distributed_kv_store::run_distributed_kv_store;
+
+mod distributed_kv_store;
 mod ip_util;
 
 #[tokio::main]
 async fn main() {
     //https://users.rust-lang.org/t/best-way-to-log-with-json/83385
     tracing_subscriber::fmt().json().init();
+
+    // run_distributed_kv_store().await.unwrap();
 
     // allows detailed logging with the RUST_LOG env variable
     let filter_layer = tracing_subscriber::EnvFilter::try_from_default_env()
