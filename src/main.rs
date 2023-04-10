@@ -14,21 +14,15 @@ use std::error::Error;
 use std::net::{Ipv4Addr, SocketAddr};
 use std::time::Duration;
 
-use async_std::io;
-use async_std::prelude::FutureExt;
 use discv5::enr::EnrPublicKey;
 use discv5::{enr, enr::CombinedKey, Discv5, Discv5Config, Discv5Event};
-use futures::{prelude::*, select};
-use libp2p::kad::record::store::MemoryStore;
-use libp2p::kad::store::MemoryStoreConfig;
-use libp2p::kad::{
-    record::Key, AddProviderOk, GetProvidersOk, GetRecordOk, Kademlia, KademliaEvent, PeerRecord,
-    PutRecordOk, QueryResult, Quorum, Record, K_VALUE,
-};
+use futures::StreamExt;
+use libp2p::floodsub::Topic;
+use libp2p::swarm::SwarmBuilder;
 use libp2p::{
-    development_transport, identity, mdns,
-    swarm::{NetworkBehaviour, SwarmBuilder, SwarmEvent},
-    PeerId,
+    floodsub::{Floodsub, FloodsubEvent},
+    gossipsub::{Gossipsub, GossipsubEvent},
+    identity, PeerId, Swarm,
 };
 use tracing::{error, info, log, warn};
 
@@ -41,6 +35,21 @@ mod ip_util;
 async fn main() -> Result<(), Box<dyn Error>> {
     //https://users.rust-lang.org/t/best-way-to-log-with-json/83385
     tracing_subscriber::fmt().json().init();
+
+    let local_key = identity::Keypair::generate_ed25519();
+    let local_peer_id = PeerId::from(local_key.public());
+    println!("Local peer id: {:?}", local_peer_id);
+    // let transport = libp2p::tokio_development_transport(local_key)?;
+    let transport = libp2p::development_transport(local_key).await?;
+
+    let mut swarm = {
+        let mut floodsub = Floodsub::new(local_peer_id.clone());
+        floodsub.subscribe(Topic::new("my-topic".into()));
+        // Swarm::(transport, floodsub, local_peer_id)
+        Swarm::with_async_std_executor(transport, floodsub, local_peer_id)
+    };
+
+    Swarm::listen_on(&mut swarm, "/ip4/0.0.0.0/tcp/0".parse()?)?;
 
     // allows detailed logging with the RUST_LOG env variable
     let filter_layer = tracing_subscriber::EnvFilter::try_from_default_env()
@@ -172,8 +181,8 @@ async fn main() -> Result<(), Box<dyn Error>> {
                         }
                         let curr_pub_ip=ip_util::get_public_ip();
                         info!("------curr_pub_ip:{}",curr_pub_ip);
-                        // handle_input_line(&mut swarm_socket_addrs.behaviour_mut().kademlia, ["PUT","k","v"].join(" "));
-                        // handle_input_line(&mut swarm_socket_addrs.behaviour_mut().kademlia, ["PUT",local_enr_pub_key.as_str(),curr_pub_ip.as_str()].join(" "));
+
+                        swarm.behaviour_mut().publish("my-topic".into(), curr_pub_ip.as_bytes());
                     }
                 }
             }
@@ -196,6 +205,18 @@ async fn main() -> Result<(), Box<dyn Error>> {
                     Discv5Event::TalkRequest(t_req) => info!("------Discv5Event::TalkRequest,TalkRequest:{:?}",t_req),
                 };
             }
+
+            event = swarm.select_next_some() => match event {
+                FloodsubEvent::Message(message) => {
+                    println!(
+                        "Received: '{:?}' from {:?}",
+                        String::from_utf8_lossy(&message.data),
+                        message.source
+                    );
+                }
+                _ => {}
+            }
+
         }
     }
 }
