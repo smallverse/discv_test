@@ -241,7 +241,7 @@ async fn main() -> Result<(), Box<dyn Error>> {
                         info!("------curr_pub_ip:{}",curr_pub_ip);
 
                         swarm.behaviour_mut().gossipsub.publish(topic.clone(), curr_pub_ip.as_bytes());
-                        info!("gossipsub publish topic: {}", topic);
+                        info!("gossipsub publish topic: {},msg:{}", topic,curr_pub_ip);
                     }
                 }
             }
