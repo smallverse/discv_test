@@ -94,6 +94,7 @@ async fn main() -> Result<(), Box<dyn Error>> {
     let topic = gossipsub::IdentTopic::new("test-net");
     // subscribes to our topic
     gossipsub.subscribe(&topic)?;
+    info!("gossipsub subscribe topic {}", topic);
 
     // Create a Swarm to manage peers and events
     let mut swarm = {
@@ -240,6 +241,7 @@ async fn main() -> Result<(), Box<dyn Error>> {
                         info!("------curr_pub_ip:{}",curr_pub_ip);
 
                         swarm.behaviour_mut().gossipsub.publish(topic.clone(), curr_pub_ip.as_bytes());
+                        info!("gossipsub publish topic: {}", topic);
                     }
                 }
             }
@@ -266,13 +268,13 @@ async fn main() -> Result<(), Box<dyn Error>> {
             event = swarm.select_next_some() => match event {
                 SwarmEvent::Behaviour(MyBehaviourEvent::Mdns(mdns::Event::Discovered(list))) => {
                     for (peer_id, _multiaddr) in list {
-                        println!("mDNS discovered a new peer: {peer_id}");
+                        info!("mDNS discovered a new peer: {peer_id}");
                         swarm.behaviour_mut().gossipsub.add_explicit_peer(&peer_id);
                     }
                 },
                 SwarmEvent::Behaviour(MyBehaviourEvent::Mdns(mdns::Event::Expired(list))) => {
                     for (peer_id, _multiaddr) in list {
-                        println!("mDNS discover peer has expired: {peer_id}");
+                        info!("mDNS discover peer has expired: {peer_id}");
                         swarm.behaviour_mut().gossipsub.remove_explicit_peer(&peer_id);
                     }
                 },
@@ -280,12 +282,12 @@ async fn main() -> Result<(), Box<dyn Error>> {
                     propagation_source: peer_id,
                     message_id: id,
                     message,
-                })) => println!(
+                })) => info!(
                         "Got message: '{}' with id: {id} from peer: {peer_id}",
                         String::from_utf8_lossy(&message.data),
                     ),
                 SwarmEvent::NewListenAddr { address, .. } => {
-                    println!("------Local node is listening on {address}");
+                    info!("------Local node is listening on {address}");
                 }
                 _ => {}
             }
