@@ -35,6 +35,13 @@ use crate::distributed_kv_store::run_distributed_kv_store;
 mod distributed_kv_store;
 mod ip_util;
 
+// We create a custom network behaviour that combines Gossipsub and Mdns.
+#[derive(NetworkBehaviour)]
+struct MyBehaviour {
+    gossipsub: gossipsub::Behaviour,
+    mdns: mdns::async_io::Behaviour,
+}
+
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn Error>> {
     //https://users.rust-lang.org/t/best-way-to-log-with-json/83385
@@ -278,7 +285,7 @@ async fn main() -> Result<(), Box<dyn Error>> {
                         String::from_utf8_lossy(&message.data),
                     ),
                 SwarmEvent::NewListenAddr { address, .. } => {
-                    println!("Local node is listening on {address}");
+                    println!("------Local node is listening on {address}");
                 }
                 _ => {}
             }
