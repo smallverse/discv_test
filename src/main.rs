@@ -22,7 +22,6 @@ use futures::{future::Either, prelude::*, select};
 use libp2p::core::transport::Boxed;
 use libp2p::gossipsub::{Behaviour, Event, Gossipsub, GossipsubEvent};
 use libp2p::{
-    core::{muxing::StreamMuxerBox, transport::OrTransport, upgrade},
     gossipsub, identity, mdns, noise,
     swarm::NetworkBehaviour,
     swarm::{SwarmBuilder, SwarmEvent},
