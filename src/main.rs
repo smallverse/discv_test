@@ -16,6 +16,7 @@ use std::hash::{Hash, Hasher};
 use std::net::{Ipv4Addr, SocketAddr};
 use std::time::Duration;
 
+use async_std::io;
 use discv5::enr::EnrPublicKey;
 use discv5::{enr, enr::CombinedKey, Discv5, Discv5Config, Discv5Event};
 use futures::{future::Either, prelude::*, select};
@@ -46,9 +47,12 @@ async fn main() -> Result<(), Box<dyn Error>> {
     let topic = gossipsub::IdentTopic::new("test-net");
     // subscribes to our topic
     gossipsub.subscribe(&topic)?;
-    info!("gossipsub subscribe topic {}", topic);
+    info!("------gossipsub subscribe topic {}", topic);
 
     let mut swarm = gossipsub_listen(local_peer_id, transport, gossipsub);
+
+    // Read full lines from stdin
+    let mut stdin = io::BufReader::new(io::stdin()).lines().fuse();
 
     // allows detailed logging with the RUST_LOG env variable
     let filter_layer = tracing_subscriber::EnvFilter::try_from_default_env()
@@ -102,7 +106,7 @@ async fn main() -> Result<(), Box<dyn Error>> {
     );
 
     let local_enr_pub_key = base64::encode(local_enr.public_key().encode());
-    info!("local_enr_pub_key:{}", local_enr_pub_key);
+    info!("------local_enr_pub_key:{}", local_enr_pub_key);
 
     // default configuration
     let config = Discv5Config::default();
@@ -182,7 +186,7 @@ async fn main() -> Result<(), Box<dyn Error>> {
                         info!("------curr_pub_ip:{}",curr_pub_ip);
 
                         swarm.behaviour_mut().gossipsub.publish(topic.clone(), curr_pub_ip.as_bytes());
-                        info!("gossipsub publish topic: {},msg:{}", topic,curr_pub_ip);
+                        info!("------gossipsub publish topic: {},msg:{}", topic,curr_pub_ip);
                     }
                 }
             }
@@ -206,6 +210,14 @@ async fn main() -> Result<(), Box<dyn Error>> {
                 };
             }
 
+            line = stdin.select_next_some() => {
+                if let Err(e) = swarm
+                    .behaviour_mut().gossipsub
+                    .publish(topic.clone(), line.expect("Stdin not to close").as_bytes()) {
+                    println!("Publish error: {e:?}");
+                }
+            },
+
             event = swarm.select_next_some() => match event {
                 SwarmEvent::Behaviour(MyBehaviourEvent::Mdns(mdns::Event::Discovered(list))) => {
                     for (peer_id, _multiaddr) in list {
@@ -224,7 +236,7 @@ async fn main() -> Result<(), Box<dyn Error>> {
                     message_id: id,
                     message,
                 })) => info!(
-                        "Got message: '{}' with id: {id} from peer: {peer_id}",
+                        "------Got message: '{}' with id: {id} from peer: {peer_id}",
                         String::from_utf8_lossy(&message.data),
                     ),
                 SwarmEvent::NewListenAddr { address, .. } => {
