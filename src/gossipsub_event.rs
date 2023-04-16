@@ -17,6 +17,8 @@ use libp2p_quic as quic;
 use serde::{Deserialize, Serialize};
 use tracing::info;
 
+pub const TOPIC_NODE_INFO: &str = "dvf/topic_node_info";
+
 // We create a custom network behaviour that combines Gossipsub and Mdns.
 #[derive(NetworkBehaviour)]
 pub struct MyBehaviour {

@@ -32,7 +32,9 @@ use libp2p::{
 use libp2p_quic as quic;
 use tracing::{error, info, log, warn};
 
-use crate::gossipsub_event::{gossipsub_listen, init_gossipsub, MyBehaviourEvent, MyMessage};
+use crate::gossipsub_event::{
+    gossipsub_listen, init_gossipsub, MyBehaviourEvent, MyMessage, TOPIC_NODE_INFO,
+};
 
 mod distributed_kv_store;
 mod gossipsub_event;
@@ -46,7 +48,7 @@ async fn main() -> Result<(), Box<dyn Error>> {
 
     let (local_peer_id, transport, mut gossipsub) = init_gossipsub();
     // Create a Gossipsub topic
-    let topic = gossipsub::IdentTopic::new("test-net");
+    let topic = gossipsub::IdentTopic::new(TOPIC_NODE_INFO);
     // subscribes to our topic
     gossipsub.subscribe(&topic)?;
     info!("------gossipsub subscribe topic {}", topic);
