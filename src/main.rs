@@ -184,11 +184,11 @@ async fn main() -> Result<(), Box<dyn Error>> {
                             );
                             info!("------node,public_key:{:?}",base64::encode(enr.public_key().encode()));
                         }
-                        let curr_pub_ip=ip_util::get_public_ip();
+                        let curr_pub_ip = ip_util::get_public_ip();
                         info!("------curr_pub_ip:{}",curr_pub_ip);
 
                         let msg = MyMessage{pub_key:local_enr_pub_key.clone(),addr:[curr_pub_ip,port.to_string()].join(":"),enr:local_enr.to_base64(),desc:"".to_string(),timestamp_nanos_utc:Utc::now().timestamp_nanos(),timestamp_nanos_local:Local::now().timestamp_nanos()};
-                        let msg_str=serde_json::to_string(&msg).unwrap();
+                        let msg_str = serde_json::to_string(&msg).unwrap();
                         swarm.behaviour_mut().gossipsub.publish(topic.clone(), msg_str.as_bytes());
                         info!("------gossipsub publish topic: {},msg:{}", topic,msg_str);
                     }
