@@ -52,10 +52,10 @@ pub fn gossipsub_listen(
 
     // Listen on all interfaces and whatever port the OS assigns
     swarm
-        .listen_on("/ip4/0.0.0.0/udp/0/quic-v1".parse().unwrap())
+        .listen_on("/ip4/0.0.0.0/udp/27000/quic-v1".parse().unwrap())
         .unwrap();
     swarm
-        .listen_on("/ip4/0.0.0.0/tcp/0".parse().unwrap())
+        .listen_on("/ip4/0.0.0.0/tcp/27000".parse().unwrap())
         .unwrap();
 
     info!("pub/sub messages and they will be sent to connected peers using Gossipsub");
