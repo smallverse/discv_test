@@ -22,6 +22,8 @@ pub struct MyBehaviour {
     pub mdns: mdns::async_io::Behaviour,
 }
 
+pub struct MyMessage {}
+
 pub fn gossipsub_listen(
     local_peer_id: PeerId,
     transport: Boxed<(PeerId, StreamMuxerBox)>,
