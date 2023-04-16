@@ -54,7 +54,7 @@ use async_std::io;
 use futures::{future::Either, prelude::*, select};
 use libp2p::core::transport::MemoryTransport;
 use libp2p::gossipsub::{
-    Gossipsub, GossipsubConfig, GossipsubEvent, IdentTopic, MessageAuthenticity,
+    Behaviour, Gossipsub, GossipsubConfig, GossipsubEvent, IdentTopic, MessageAuthenticity,
 };
 use libp2p::identity::Keypair;
 use libp2p::{gossipsub, identity, mdns, swarm, PeerId, Swarm, Transport};
@@ -63,41 +63,10 @@ use tracing::{error, info, log, warn};
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn Error>> {
-    let local_key = Keypair::generate_ed25519();
-    let local_peer_id = libp2p::core::PeerId::from(local_key.public());
-
-    // Set up an encrypted TCP Transport over the Mplex
-    // This is test transport (memory).
-    let transport = MemoryTransport::default()
-        .upgrade(libp2p::core::upgrade::Version::V1)
-        .authenticate(libp2p::noise::NoiseAuthenticated::xx(&local_key).unwrap())
-        .multiplex(libp2p::mplex::MplexConfig::new())
-        .boxed();
-
     // Create a Gossipsub topic
     let topic = libp2p::gossipsub::IdentTopic::new("example");
 
-    // Set the message authenticity - How we expect to publish messages
-    // Here we expect the publisher to sign the message with their key.
-    let message_authenticity = MessageAuthenticity::Signed(local_key);
-
-    // Create a Swarm to manage peers and events
-    let mut swarm = {
-        // set default parameters for gossipsub
-        let gossipsub_config = libp2p::gossipsub::Config::default();
-        // build a gossipsub network behaviour
-        let mut gossipsub: libp2p::gossipsub::Behaviour =
-            libp2p::gossipsub::Behaviour::new(message_authenticity, gossipsub_config).unwrap();
-        // subscribe to the topic
-        // gossipsub.subscribe(&topic);
-        // create the swarm (use an executor in a real example)
-        libp2p::swarm::Swarm::without_executor(transport, gossipsub, local_peer_id)
-    };
-
-    // Listen on a memory transport.
-    let memory: Multiaddr = libp2p::core::multiaddr::Protocol::Memory(10).into();
-    let addr = swarm.listen_on(memory).unwrap();
-    println!("Listening on {:?}", addr);
+    let mut swarm = init_gossipsub();
 
     swarm
         .behaviour_mut()
@@ -136,4 +105,40 @@ async fn main() -> Result<(), Box<dyn Error>> {
 
         }
     }
+}
+
+pub fn init_gossipsub() -> Swarm<Behaviour> {
+    let local_key = Keypair::generate_ed25519();
+    let local_peer_id = libp2p::core::PeerId::from(local_key.public());
+
+    // Set up an encrypted TCP Transport over the Mplex
+    // This is test transport (memory).
+    let transport = MemoryTransport::default()
+        .upgrade(libp2p::core::upgrade::Version::V1)
+        .authenticate(libp2p::noise::NoiseAuthenticated::xx(&local_key).unwrap())
+        .multiplex(libp2p::mplex::MplexConfig::new())
+        .boxed();
+
+    // Set the message authenticity - How we expect to publish messages
+    // Here we expect the publisher to sign the message with their key.
+    let message_authenticity = MessageAuthenticity::Signed(local_key);
+
+    // Create a Swarm to manage peers and events
+    let mut swarm = {
+        // set default parameters for gossipsub
+        let gossipsub_config = libp2p::gossipsub::Config::default();
+        // build a gossipsub network behaviour
+        let mut gossipsub: libp2p::gossipsub::Behaviour =
+            libp2p::gossipsub::Behaviour::new(message_authenticity, gossipsub_config).unwrap();
+        // subscribe to the topic
+        // gossipsub.subscribe(&topic);
+        // create the swarm (use an executor in a real example)
+        libp2p::swarm::Swarm::without_executor(transport, gossipsub, local_peer_id)
+    };
+
+    // Listen on a memory transport.
+    let memory: Multiaddr = libp2p::core::multiaddr::Protocol::Memory(10).into();
+    let addr = swarm.listen_on(memory).unwrap();
+    println!("Listening on {:?}", addr);
+    swarm
 }

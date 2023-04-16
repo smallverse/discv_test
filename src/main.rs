@@ -17,6 +17,7 @@ use std::net::{Ipv4Addr, SocketAddr};
 use std::time::Duration;
 
 use async_std::io;
+use chrono::{Local, Utc};
 use discv5::enr::EnrPublicKey;
 use discv5::{enr, enr::CombinedKey, Discv5, Discv5Config, Discv5Event};
 use futures::{future::Either, prelude::*, select};
@@ -31,10 +32,11 @@ use libp2p::{
 use libp2p_quic as quic;
 use tracing::{error, info, log, warn};
 
-use crate::gossipsub_event::{gossipsub_listen, init_gossipsub, MyBehaviourEvent};
+use crate::gossipsub_event::{gossipsub_listen, init_gossipsub, MyBehaviourEvent, MyMessage};
 
 mod distributed_kv_store;
 mod gossipsub_event;
+mod gossipsub_event1;
 mod ip_util;
 
 #[tokio::main]
@@ -112,7 +114,7 @@ async fn main() -> Result<(), Box<dyn Error>> {
     let config = Discv5Config::default();
 
     // construct the discv5 server
-    let mut discv5: Discv5 = Discv5::new(local_enr, enr_key, config).unwrap();
+    let mut discv5: Discv5 = Discv5::new(local_enr.clone(), enr_key, config).unwrap();
 
     // if we know of another peer's ENR, add it known peers
     let base64_enr = String::from("enr:-IS4QMOVF32mO7kgr1-vHjHEQAqmuthEn3_xbDXAfbrkkpUeSfRVoEjkVo3Sj_Q0LyAxw0jiBNVP0Y5EfGsfn-k4PuQBgmlkgnY0gmlwhA3Vb9GJc2VjcDI1NmsxoQOfyzH4QUhiHcN11QC9xTo-SQIjiKmbHkwOuMfqhiJQqIN1ZHCCIy0");
@@ -185,8 +187,10 @@ async fn main() -> Result<(), Box<dyn Error>> {
                         let curr_pub_ip=ip_util::get_public_ip();
                         info!("------curr_pub_ip:{}",curr_pub_ip);
 
-                        swarm.behaviour_mut().gossipsub.publish(topic.clone(), curr_pub_ip.as_bytes());
-                        info!("------gossipsub publish topic: {},msg:{}", topic,curr_pub_ip);
+                        let msg = MyMessage{pub_key:local_enr_pub_key.clone(),addr:[curr_pub_ip,port.to_string()].join(":"),enr:local_enr.to_base64(),desc:"".to_string(),timestamp_nanos_utc:Utc::now().timestamp_nanos(),timestamp_nanos_local:Local::now().timestamp_nanos()};
+                        let msg_str=serde_json::to_string(&msg).unwrap();
+                        swarm.behaviour_mut().gossipsub.publish(topic.clone(), msg_str.as_bytes());
+                        info!("------gossipsub publish topic: {},msg:{}", topic,msg_str);
                     }
                 }
             }
